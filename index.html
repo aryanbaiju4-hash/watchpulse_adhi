@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WatchPulse — Supabase Sync Edition</title>
+    <meta name="theme-color" content="#0f172a">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .welcome-banner { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 sm:pb-12 selection:bg-orange-500 selection:text-white">
+
+    <!-- Welcome Banner for Adhi -->
+    <div id="welcomeBanner" class="welcome-banner bg-gradient-to-r from-orange-600 to-orange-500 text-white px-4 py-3 shadow-lg mb-4 flex justify-between items-center max-w-5xl mx-auto sm:rounded-2xl sm:mt-4">
+        <div class="flex items-center gap-2.5 mx-auto sm:mx-0">
+            <span class="text-xl">👋</span>
+            <p class="font-bold text-sm sm:text-base">Welcome back, Adhi! Ready to track your favorite shows?</p>
+        </div>
+        <button onclick="dismissWelcome()" class="text-white/80 hover:text-white font-bold text-sm px-2 py-1 rounded-lg hover:bg-white/10 transition">✕</button>
+    </div>
+
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3.5 mb-6 shadow-md">
+        <div class="max-w-5xl mx-auto flex justify-between items-center gap-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/20 shrink-0">W</div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">Watch<span class="text-orange-500">Pulse</span></h1>
+                    <p class="text-slate-400 text-[11px] hidden sm:block">Cloud Sync Edition</p>
+                </div>
+            </div>
+            <button onclick="openAddModal()" class="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-xs sm:text-sm px-4 py-2.5 rounded-xl font-bold transition shadow-lg shadow-orange-500/25 flex items-center gap-1.5 touch-manipulation shrink-0">
+                <span class="text-lg leading-none">+</span> Add Title
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-3.5 sm:px-6 space-y-6">
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">🔍</div>
+            <input type="text" id="searchInput" oninput="debounceSearch()" placeholder="Search through titles..." class="w-full pl-10 pr-10 py-3 bg-slate-800/90 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition shadow-inner">
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white font-bold text-xs">✕ Clear</button>
+        </div>
+
+        <div id="app-container" class="space-y-7">
+            <!-- Dynamic Content -->
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="addModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+        <div class="bg-slate-800 border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-5">
+                <h2 id="modalTitle" class="text-lg font-bold text-white">Add Entry</h2>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-white text-xl p-2 -mr-2">✕</button>
+            </div>
+            <form id="mediaForm" onsubmit="saveItemForm(event)" class="space-y-4">
+                <input type="hidden" id="editIndexId">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Title Name</label>
+                    <input type="text" id="titleInput" required placeholder="e.g., Interstellar" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-orange-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Select Section Heading</label>
+                    <select id="statusInput" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-orange-500 transition">
+                        <option value="Watching Now">Watching Now</option>
+                        <option value="Waiting for New Season">Waiting for New Season</option>
+                        <option value="Completed Shows">Completed Shows</option>
+                        <option value="Need to Watch (Movies)">Need to Watch (Movies)</option>
+                        <option value="Completed Movies">Completed Movies</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Progress / Episode / Status</label>
+                    <input type="text" id="progressInput" placeholder="e.g., Season 1 ep 3" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-orange-500 transition">
+                </div>
+                <div class="flex space-x-3 pt-3">
+                    <button type="button" onclick="closeAddModal()" class="flex-1 py-3.5 rounded-xl bg-slate-700 text-slate-300 font-bold text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 py-3.5 rounded-xl bg-orange-500 text-white font-bold text-sm shadow-lg shadow-orange-500/25">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://aiuxujdirkvgeixodtio.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpdXh1amRpcmt2Z2VpeG9kdGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDk5NzMsImV4cCI6MjEwNDI4NTk3M30.uX93fWioso6MxjEWbKbRKT1Mrn-vsHtVW53R5nkSRoQ';
+
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DEFAULT_CATEGORIES = ["Watching Now", "Waiting for New Season", "Completed Shows", "Need to Watch (Movies)", "Completed Movies"];
+        let searchTimeout = null;
+        let allMediaData = [];
+        let draggedId = null;
+
+        function dismissWelcome() {
+            const banner = document.getElementById('welcomeBanner');
+            if (banner) {
+                banner.style.transition = 'all 0.3s ease';
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-10px)';
+                setTimeout(() => banner.remove(), 300);
+            }
+        }
+
+        async function fetchMedia() {
+            const { data, error } = await _supabase.from('media').select('*').order('position', { ascending: true }).order('id', { ascending: false });
+            if (error) {
+                console.error('Error fetching:', error);
+                return;
+            }
+            allMediaData = data || [];
+            filterAndRender();
+        }
+
+        // Drag and Drop Handlers
+        function dragStart(e, id) {
+            draggedId = id;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        async function dropItem(e, targetId, category) {
+            e.preventDefault();
+            if (!draggedId || draggedId === targetId) return;
+
+            const categoryItems = allMediaData.filter(item => item.status === category);
+            const draggedIndex = categoryItems.findIndex(item => item.id === draggedId);
+            const targetIndex = categoryItems.findIndex(item => item.id === targetId);
+
+            if (draggedIndex === -1 || targetIndex === -1) return;
+
+            // Reorder array locally
+            const [movedItem] = categoryItems.splice(draggedIndex, 1);
+            categoryItems.splice(targetIndex, 0, movedItem);
+
+            // Update positions in Supabase database
+            const updates = categoryItems.map((item, idx) => {
+                item.position = idx;
+                return _supabase.from('media').update({ position: idx }).eq('id', item.id);
+            });
+
+            await Promise.all(updates);
+            fetchMedia();
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                filterAndRender();
+            }, 200);
+        }
+
+        function filterAndRender() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            document.getElementById('clearSearchBtn').classList.toggle('hidden', query.length === 0);
+
+            const filtered = allMediaData.filter(item => 
+                (item.title && item.title.toLowerCase().includes(query)) || 
+                (item.progress && item.progress.toLowerCase().includes(query))
+            );
+
+            renderApp(filtered, query);
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filterAndRender();
+        }
+
+        function renderApp(mediaData = [], searchQuery = '') {
+            const container = document.getElementById('app-container');
+            if (!container) return;
+            container.innerHTML = '';
+            let totalMatches = mediaData.length;
+
+            DEFAULT_CATEGORIES.forEach(category => {
+                const items = mediaData.filter(item => item.status === category);
+                if (searchQuery && items.length === 0) return;
+
+                let sectionHTML = `
+                    <section class="space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <h2 class="text-sm sm:text-base font-extrabold text-slate-200 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>
+                                ${category}
+                            </h2>
+                            <div class="flex items-center gap-2">
+                                <button onclick="openAddModalForCategory('${category}')" class="text-xs text-orange-400 hover:text-orange-300 font-semibold px-2 py-1 rounded bg-orange-500/10 border border-orange-500/20">+ Add Here</button>
+                                <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-bold border border-slate-700/60">${items.length}</span>
+                            </div>
+                        </div>
+                `;
+
+                if (items.length === 0) {
+                    sectionHTML += `<div class="p-4 border border-dashed border-slate-800 rounded-2xl text-center text-xs text-slate-500 font-medium">No titles here.</div>`;
+                } else {
+                    sectionHTML += `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">`;
+                    items.forEach((item) => {
+                        sectionHTML += `
+                            <div draggable="true" 
+                                 ondragstart="dragStart(event, ${item.id})" 
+                                 ondragover="dragOver(event)" 
+                                 ondrop="dropItem(event, ${item.id}, '${category}')"
+                                 class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 flex flex-col justify-between shadow-sm cursor-grab active:cursor-grabbing hover:border-slate-500 transition">
+                                <div class="flex justify-between items-start gap-3 mb-3">
+                                    <div class="flex items-start gap-2">
+                                        <h3 class="font-bold text-sm text-slate-100 leading-snug line-clamp-2">${escapeHtml(item.title)}</h3>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <button onclick="openEditModal(${item.id}, '${escapeHtml(item.title)}', '${item.status}', '${escapeHtml(item.progress)}')" class="text-slate-400 hover:text-orange-400 p-1 text-xs" title="Edit">✎</button>
+                                        <button onclick="deleteItem(${item.id})" class="text-slate-400 hover:text-red-400 p-1 text-xs" title="Delete">✕</button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-2.5 border-t border-slate-700/40 pointer-events-none">
+                                    <span class="text-xs font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-lg">${escapeHtml(item.progress || 'New')}</span>
+                                    <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">⠿ Drag</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    sectionHTML += `</div>`;
+                }
+                sectionHTML += `</section>`;
+                container.innerHTML += sectionHTML;
+            });
+
+            if (searchQuery && totalMatches === 0) {
+                container.innerHTML = `<div class="p-8 border border-dashed border-slate-800 rounded-2xl text-center"><p class="text-slate-400 text-sm">No titles found matching "${searchQuery}"</p></div>`;
+            }
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "Add New Title";
+            document.getElementById('mediaForm').reset();
+            document.getElementById('editIndexId').value = '';
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+
+        function openAddModalForCategory(category) {
+            openAddModal();
+            document.getElementById('statusInput').value = category;
+        }
+
+        function openEditModal(id, title, status, progress) {
+            document.getElementById('modalTitle').innerText = "Update Entry";
+            document.getElementById('editIndexId').value = id;
+            document.getElementById('titleInput').value = title;
+            document.getElementById('statusInput').value = status;
+            document.getElementById('progressInput').value = progress;
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+        }
+
+        async function saveItemForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('editIndexId').value;
+            const title = document.getElementById('titleInput').value;
+            const status = document.getElementById('statusInput').value;
+            const progress = document.getElementById('progressInput').value || 'New';
+
+            if (id) {
+                await _supabase.from('media').update({ title, status, progress }).eq('id', id);
+            } else {
+                await _supabase.from('media').insert([{ title, status, progress, position: 0 }]);
+            }
+
+            closeAddModal();
+            fetchMedia();
+        }
+
+        async function deleteItem(id) {
+            if (confirm("Remove this title?")) {
+                await _supabase.from('media').delete().eq('id', id);
+                fetchMedia();
+            }
+        }
+
+        _supabase.channel('public:media')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'media' }, payload => {
+                fetchMedia();
+            })
+            .subscribe();
+
+        fetchMedia();
+    </script>
+</body>
+</html>
