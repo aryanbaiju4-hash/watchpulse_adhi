@@ -12,23 +12,9 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .welcome-banner { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-20 sm:pb-12 selection:bg-orange-500 selection:text-white">
-
-    <!-- Welcome Banner for Adhi -->
-    <div id="welcomeBanner" class="welcome-banner bg-gradient-to-r from-orange-600 to-orange-500 text-white px-4 py-3 shadow-lg mb-4 flex justify-between items-center max-w-5xl mx-auto sm:rounded-2xl sm:mt-4">
-        <div class="flex items-center gap-2.5 mx-auto sm:mx-0">
-            <span class="text-xl">👋</span>
-            <p class="font-bold text-sm sm:text-base">Welcome back, Adhi! Ready to track your favorite shows?</p>
-        </div>
-        <button onclick="dismissWelcome()" class="text-white/80 hover:text-white font-bold text-sm px-2 py-1 rounded-lg hover:bg-white/10 transition">✕</button>
-    </div>
 
     <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3.5 mb-6 shadow-md">
         <div class="max-w-5xl mx-auto flex justify-between items-center gap-4">
@@ -36,7 +22,7 @@
                 <div class="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-500/20 shrink-0">W</div>
                 <div>
                     <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">Watch<span class="text-orange-500">Pulse</span></h1>
-                    <p class="text-slate-400 text-[11px] hidden sm:block">Cloud Sync Edition</p>
+                    <p class="text-orange-400 font-semibold text-[11px]">Welcome back, Adhi 👋</p>
                 </div>
             </div>
             <button onclick="openAddModal()" class="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-xs sm:text-sm px-4 py-2.5 rounded-xl font-bold transition shadow-lg shadow-orange-500/25 flex items-center gap-1.5 touch-manipulation shrink-0">
@@ -103,16 +89,6 @@
         let searchTimeout = null;
         let allMediaData = [];
         let draggedId = null;
-
-        function dismissWelcome() {
-            const banner = document.getElementById('welcomeBanner');
-            if (banner) {
-                banner.style.transition = 'all 0.3s ease';
-                banner.style.opacity = '0';
-                banner.style.transform = 'translateY(-10px)';
-                setTimeout(() => banner.remove(), 300);
-            }
-        }
 
         async function fetchMedia() {
             const { data, error } = await _supabase.from('media').select('*').order('position', { ascending: true }).order('id', { ascending: false });
